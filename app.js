@@ -37,6 +37,8 @@
   let saveTimer = null;
   let uiTimer = null;
   let sleepCheckTimer = null;
+  let loadedFile = "";
+  let audioLoading = false;
 
   function loadState() {
     try {
@@ -52,6 +54,7 @@
     const data = {
       index,
       pos: Math.floor(audio.currentTime || 0),
+      wasPlaying: !audio.paused && !audioLoading,
       playMode,
       muted,
       sleepTimerEndMs,
@@ -188,29 +191,69 @@
     if (cur) cur.scrollIntoView({ block: "center", behavior: "smooth" });
   }
 
-  function playIndex(i, posSec, autoplay) {
+  function setNowPlayingTitle(c, suffix) {
+    nowPlaying.textContent = c.title + (suffix || "");
+  }
+
+  function applySeekAndPlay(posSec, autoplay) {
+    if (posSec > 0 && audio.duration && posSec < audio.duration - 1) {
+      audio.currentTime = posSec;
+    }
+    if (autoplay) {
+      audio.play().catch(function () { updatePlayUi(); });
+    } else {
+      updatePlayUi();
+    }
+    renderList();
+    updateMediaSession();
+    scheduleSave();
+  }
+
+  /** 只更新列表与标题，不请求音频文件 */
+  function showChapterUi(i) {
     if (i < 0 || i >= chapters.length) return;
     index = i;
     const c = chapters[i];
-    nowPlaying.textContent = c.title;
+    setNowPlayingTitle(c);
+    renderList();
+    updateMediaSession();
+    updatePlayUi();
+  }
+
+  /** 按需加载单集音频（进入页面后再加载，不预载其它集） */
+  function loadChapterAudio(i, posSec, autoplay) {
+    if (i < 0 || i >= chapters.length) return;
+    index = i;
+    const c = chapters[i];
+    if (loadedFile === c.file && audio.src) {
+      setNowPlayingTitle(c);
+      applySeekAndPlay(posSec, autoplay);
+      return;
+    }
+    loadedFile = c.file;
+    audioLoading = true;
+    setNowPlayingTitle(c, " · 加载中…");
+    updatePlayUi();
     audio.src = "audio/" + encodeURIComponent(c.file);
     audio.load();
     const start = function () {
-      if (posSec > 0 && posSec < audio.duration - 1) {
-        audio.currentTime = posSec;
-      }
-      if (autoplay) {
-        audio.play().catch(function () { updatePlayUi(); });
-      }
-      renderList();
-      updateMediaSession();
-      scheduleSave();
+      audioLoading = false;
+      setNowPlayingTitle(c);
+      applySeekAndPlay(posSec, autoplay);
     };
     if (audio.readyState >= 1) start();
     else audio.addEventListener("loadedmetadata", start, { once: true });
   }
 
+  function playIndex(i, posSec, autoplay) {
+    loadChapterAudio(i, posSec, autoplay);
+  }
+
   function toggle() {
+    if (!audio.src || loadedFile !== chapters[index].file) {
+      loadChapterAudio(index, audio.currentTime || 0, true);
+      return;
+    }
     if (audio.paused) {
       audio.play().catch(function () {});
     } else {
@@ -404,8 +447,16 @@
       restartSleepCheck();
       startUiLoop();
 
-      playIndex(index, st.pos || 0, true);
+      showChapterUi(index);
       scrollToCurrent();
+
+      const resumePos = st.pos || 0;
+      const shouldAutoplay = resumePos > 0 || !!st.wasPlaying;
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          loadChapterAudio(index, resumePos, shouldAutoplay);
+        });
+      });
     })
     .catch(function () {
       subtitle.textContent = "加载失败，请通过 HTTP 服务器打开本页";
