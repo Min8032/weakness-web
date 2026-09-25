@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#14161B" />
+  <title>人性的弱点</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="header">
+      <div class="header-text">
+        <h1>人性的弱点</h1>
+        <p id="subtitle">有声书</p>
+      </div>
+      <div class="header-actions">
+        <button type="button" id="btnTimer" class="icon-btn" title="定时停止" aria-label="定时停止">⏱</button>
+        <button type="button" id="btnMute" class="icon-btn" title="静音" aria-label="取消静音">🔊</button>
+      </div>
+    </header>
+
+    <ul id="chapterList" class="chapter-list"></ul>
+
+    <footer class="player">
+      <p id="nowPlaying" class="now-playing"></p>
+      <input type="range" id="seekBar" class="seek" min="0" max="100" value="0" step="1" />
+      <div class="time-row">
+        <span id="timeCurrent">00:00</span>
+        <div class="transport">
+          <button type="button" id="btnPrev" class="transport-btn" aria-label="上一集">⏮</button>
+          <button type="button" id="btnPlay" class="transport-btn play" aria-label="播放">▶</button>
+          <button type="button" id="btnNext" class="transport-btn" aria-label="下一集">⏭</button>
+        </div>
+        <span id="timeDuration">00:00</span>
+      </div>
+      <div class="mode-row">
+        <button type="button" id="btnMode" class="mode-btn" aria-label="播放模式">🔁</button>
+        <span id="modeLabel">顺序</span>
+      </div>
+    </footer>
+  </div>
+
+  <div id="timerMenu" class="menu-overlay hidden" role="dialog" aria-label="定时停止">
+    <div class="menu-panel">
+      <p class="menu-title">定时停止</p>
+      <ul id="timerOptions"></ul>
+      <button type="button" id="timerClose" class="menu-close">关闭</button>
+    </div>
+  </div>
+
+  <audio id="audio" preload="metadata" playsinline webkit-playsinline></audio>
+  <script src="app.js"></script>
+</body>
+</html>
