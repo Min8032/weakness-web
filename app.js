@@ -39,6 +39,7 @@
   let sleepCheckTimer = null;
   let loadedFile = "";
   let audioLoading = false;
+  let pendingResumePos = 0;
 
   function loadState() {
     try {
@@ -246,12 +247,15 @@
   }
 
   function playIndex(i, posSec, autoplay) {
+    if (i !== index) pendingResumePos = 0;
     loadChapterAudio(i, posSec, autoplay);
   }
 
   function toggle() {
     if (!audio.src || loadedFile !== chapters[index].file) {
-      loadChapterAudio(index, audio.currentTime || 0, true);
+      const pos = pendingResumePos > 0 ? pendingResumePos : audio.currentTime || 0;
+      pendingResumePos = 0;
+      loadChapterAudio(index, pos, true);
       return;
     }
     if (audio.paused) {
@@ -447,16 +451,12 @@
       restartSleepCheck();
       startUiLoop();
 
+      pendingResumePos = st.pos || 0;
       showChapterUi(index);
+      if (pendingResumePos > 0 && chapters[index]) {
+        setNowPlayingTitle(chapters[index], " · 点 ▶ 继续（" + fmt(pendingResumePos) + "）");
+      }
       scrollToCurrent();
-
-      const resumePos = st.pos || 0;
-      const shouldAutoplay = resumePos > 0 || !!st.wasPlaying;
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () {
-          loadChapterAudio(index, resumePos, shouldAutoplay);
-        });
-      });
     })
     .catch(function () {
       subtitle.textContent = "加载失败，请通过 HTTP 服务器打开本页";
